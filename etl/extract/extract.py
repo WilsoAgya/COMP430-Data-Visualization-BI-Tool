@@ -26,12 +26,14 @@ def extract():
         try:
             raw_data.append({
                 "ticker" : ticker,
-                "info" : finance_data.info,
+                "info" : finance_data.info, 
                 "financials" : finance_data.financials,
                 "history": finance_data.history(period="6mo", interval="1h")
             })
         except Exception as e:
             print(f"Failed for {ticker}: {e}")
+
+
 
     return raw_data
 

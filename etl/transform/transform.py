@@ -44,12 +44,36 @@ def transform_ticker():
     print(transformed_ticker_data)
 
 
-'''def transform_time():
-    
+def transform_time():
+
+    #Array holds clean time data
+    transformed_time_data = []
+    seen_timestamps = set()
+    index = 0
+    for record in raw_data:
+    #History is a dataframe with all the dates
+        history = record['history']
+    # Get each date and makes sure there's no duplicates
+        for row in history.index:
+            # If theres a duplicate add the date to the set
+            if row in seen_timestamps:
+                continue
+            seen_timestamps.add(row)
+            #Appending values to the list
+            transformed_time_data.append({
+                "time_key":index,
+                "fulldate":row,
+                "day":row.day,
+                "month":row.month,
+                "year":row.year
+            })
+            index+=1
+
+    print(transformed_time_data)
 
 
-def transform_industry():
+'''def transform_industry():
 
 def transform_profitability():'''
 
-transform_ticker()
+transform_time()
