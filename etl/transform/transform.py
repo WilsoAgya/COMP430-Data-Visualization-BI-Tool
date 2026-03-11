@@ -1,107 +1,113 @@
 import pandas as pd
 import requests
 import yfinance as yf
-from etl.extract import extract
+from etl.extract.extract import extract
 import io
 
-raw_data = extract.extract()
-#Basic data extraction for the ticker dimension
-def transform_ticker():
+raw_data = extract()
 
+
+def transform_ticker():
 
     transformed_ticker_data = []
     seen_symbols = set()
 
-    #Handling messy data
-    for index,record in enumerate(raw_data):
+    for index, record in enumerate(raw_data):
         info = record["info"]
+
         if not info:
             continue
-        if not info['shortName']:
-            continue
-        if not record['ticker']:
+
+        if not info.get("shortName"):
             continue
 
-        symbol = info ['symbol']
+        if not record.get("ticker"):
+            continue
+
+        symbol = info.get("symbol")
+
         if symbol in seen_symbols:
             continue
-        seen_symbols.add(symbol)
 
-        #Makes it only have 3 sentences for the overview
+        seen_symbols.add(symbol)
 
         full_summary = info.get("longBusinessSummary", "")
         sentences = full_summary.split(". ")
-        short_summary = ". ".join(sentences[:3]) + "." if sentences else ""
+        short_summary = (". ".join(sentences[:3]) + ".")[:500] if sentences else ""
 
         transformed_ticker_data.append({
             "ticker_id": index,
-            "company_name": info["shortName"],
-            "ticker_symbol": record['ticker'],
-            "market": info["country"],
+            "company_name": info.get("shortName"),
+            "ticker_symbol": record.get("ticker"),
+            "market": info.get("country"),
             "ticker_info": short_summary,
         })
 
-    print(transformed_ticker_data)
+    return transformed_ticker_data
 
 
 def transform_time():
 
-    #Array holds clean time data
     transformed_time_data = []
     seen_timestamps = set()
     index = 0
+
     for record in raw_data:
-    #History is a dataframe with all the dates
-        history = record['history']
-    # Get each date and makes sure there's no duplicates
+        history = record["history"]
+
         for row in history.index:
-            # If theres a duplicate add the date to the set
+
             if row in seen_timestamps:
                 continue
-            seen_timestamps.add(row)
-            #Appending values to the list
-            transformed_time_data.append({
-                "time_key":index,
-                "fulldate":row,
-                "day":row.day,
-                "month":row.month,
-                "year":row.year
-            })
-            index+=1
 
-    print(transformed_time_data)
+            seen_timestamps.add(row)
+
+            transformed_time_data.append({
+                "time_key": index,
+                "full_date": row,
+                "day": row.day,
+                "month": row.month,
+                "year": row.year
+            })
+
+            index += 1
+
+    return transformed_time_data
 
 
 def transform_industry():
+
     transformed_industry_data = []
     seen_industries = set()
     index = 0
 
     for record in raw_data:
-        industry_info = record['info']
+        info = record["info"]
 
-        if not['info']:
-            continue
-        if not industry_info['industry']:
+        industry = info.get("industry")
+
+        if not industry:
             continue
 
-        if record in transformed_industry_data:
+        if industry in seen_industries:
             continue
-        seen_industries.add(industry_info['industry'])
+
+        seen_industries.add(industry)
 
         transformed_industry_data.append({
             "industry_id": index,
-            "industry_name": industry_info['industry'],
-            "sector": industry_info['sector'],
-            "currency": industry_info['currency']
+            "industry_name": industry,
+            "sector": info.get("sector"),
+            "currency": info.get("currency")
         })
-        index+=1
 
-    print(transformed_industry_data)
+        index += 1
 
+    return transformed_industry_data
 
 
 def transform_profitability():
+
     def get_roa_tier(roa):
         if roa is None:
             return "Unknown"
@@ -127,12 +133,15 @@ def transform_profitability():
             return "Poor"
 
     profitability_data = []
-    index = 0
-    for record in raw_data:
-        net_income = record['info'].get('netIncomeToCommon')
-        total_debt = record['info'].get('totalDebt')
-        book_value = record['info'].get('bookValue')
-        shares = record['info'].get('sharesOutstanding')
+
+    for index, record in enumerate(raw_data):
+
+        info = record["info"]
+
+        net_income = info.get("netIncomeToCommon")
+        total_debt = info.get("totalDebt")
+        book_value = info.get("bookValue")
+        shares = info.get("sharesOutstanding")
 
         if None in (net_income, total_debt, book_value, shares) or (book_value * shares + total_debt) == 0:
             roic = None
@@ -141,29 +150,33 @@ def transform_profitability():
 
         profitability_data.append({
             "tier_id": index,
-            "roa_tier": get_roa_tier(record['info'].get('returnOnAssets')),
+            "roa_tier": get_roa_tier(info.get("returnOnAssets")),
             "roic_tier": get_roic_tier(roic)
         })
-        index += 1
 
-    print(profitability_data)
+    return profitability_data
+
 
 def transform_risk():
+
     risk_data = []
-    index = 0
-    for record in raw_data:
-        info = record['info']
+
+    for index, record in enumerate(raw_data):
+
+        info = record["info"]
 
         risk_data.append({
             "risk_id": index,
             "risk_category_name": "Overall Risk",
-            "risk_rating_overall": info['overallRisk'],
+            "risk_rating_overall": info.get("overallRisk")
         })
-        index += 1
+
+    return risk_data
+
 
 def transform_analysis():
+
     analysis_data = []
-    index = 0
 
     def get_trend_direction(change):
         if change is None:
@@ -175,21 +188,15 @@ def transform_analysis():
         else:
             return "Sideways"
 
-    for record in raw_data:
-        info = record['info']
+    for index, record in enumerate(raw_data):
+
+        info = record["info"]
+        change = info.get("52WeekChange")
 
         analysis_data.append({
-            "trend_id": index,
-            "trend_direction": get_trend_direction(info['52WeekChange']),
-            "trend_value": info['52WeekChange']
-
+            "analysis_key": index,
+            "trend_direction": get_trend_direction(change),
+            "trend_value": change
         })
-        index+=1
-    print(analysis_data)
 
-#def transform_facts():
-
-
-#transform_profitability()
-#transform_industry()
-#transform_time()
+    return analysis_data
