@@ -1,14 +1,19 @@
 import psycopg2
+import os
+from dotenv import load_dotenv
 from etl.transform.transform import transform_ticker
+
+# Load environment variables from .env
+load_dotenv()
 
 def connect():
     return psycopg2.connect(
-        host="db.jakobupton.dev",
-        database="comp430",
-        user="comp430",
-        password="COMP430group",
-        port=5432,
-        sslmode="require"  # safe default for remote Postgres; remove if it fails
+        host=os.getenv("DB_HOST"),
+        port=os.getenv("DB_PORT"),
+        database=os.getenv("DB_NAME"),
+        user=os.getenv("DB_USER"),
+        password=os.getenv("DB_PASSWORD"),
+        sslmode=os.getenv("DB_SSLMODE", "require")
     )
 
 def load_dim_ticker(conn):
@@ -28,7 +33,7 @@ def load_dim_ticker(conn):
                 r["company_name"],
                 r["ticker_symbol"],
                 r["market"],
-                r["ticker_info"]
+                r["ticker_info"][:500] if r["ticker_info"] else None
             )
         )
 
@@ -39,7 +44,7 @@ def run():
     conn = connect()
     load_dim_ticker(conn)
     conn.close()
-    print("Loaded dim_ticker.")
+    print("Loaded dim_ticker")
 
 if __name__ == "__main__":
     run()
