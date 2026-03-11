@@ -1,1 +1,12 @@
 COMP430_DB.session.sql
+.env
+etl/__pycache__/__init__.cpython-313.pyc
+etl/__pycache__/__init__.cpython-313.pyc
+etl/extract/__pycache__/__init__.cpython-313.pyc
+etl/extract/__pycache__/extract.cpython-313.pyc
+etl/load/__pycache__/load.cpython-313.pyc
+etl/transform/__pycache__/__init__.cpython-313.pyc
+etl/transform/__pycache__/transform.cpython-313.pyc
+etl/__pycache__/__init__.cpython-313.pyc
+etl/extract/__pycache__/__init__.cpython-313.pyc
+etl/extract/__pycache__/extract.cpython-313.pyc
