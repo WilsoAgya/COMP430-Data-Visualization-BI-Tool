@@ -43,18 +43,19 @@ def transform_ticker():
             "ticker_info": short_summary,
         })
 
+    print(transformed_ticker_data)
     return transformed_ticker_data
 
 
-def transform_time():
+def transform_time(data):
 
     transformed_time_data = []
     seen_timestamps = set()
     index = 0
-
-    for record in raw_data:
-        history = record["history"]
-
+    for record in data:
+    #History is a dataframe with all the dates
+        history = record['history']
+    # Get each date and makes sure there's no duplicates
         for row in history.index:
 
             if row in seen_timestamps:
@@ -105,9 +106,9 @@ def transform_industry():
 
     return transformed_industry_data
 
-
-def transform_profitability():
-
+#Set up for profitability dimension
+def transform_profitability(data):
+    #returnOnAsset is in api so we made function that checks the value of the roa based on its value
     def get_roa_tier(roa):
         if roa is None:
             return "Unknown"
@@ -120,6 +121,7 @@ def transform_profitability():
         else:
             return "Poor"
 
+    #Roic will be calculated
     def get_roic_tier(roic):
         if roic is None:
             return "Unknown"
@@ -154,18 +156,20 @@ def transform_profitability():
             "roic_tier": get_roic_tier(roic)
         })
 
+    print(profitability_data)
     return profitability_data
 
 
-def transform_risk():
+#Setting up risk data
+def transform_risk(data):
+    transformed_risk_data = []
+    index = 0
+    for record in data:
+        info = record['info']
+        if not info:
+            continue
 
-    risk_data = []
-
-    for index, record in enumerate(raw_data):
-
-        info = record["info"]
-
-        risk_data.append({
+        transformed_risk_data.append({
             "risk_id": index,
             "risk_category_name": "Overall Risk",
             "risk_rating_overall": info.get("overallRisk")
@@ -174,10 +178,14 @@ def transform_risk():
     return risk_data
 
 
-def transform_analysis():
+    return transformed_risk_data
 
-    analysis_data = []
+#Analysis dimension
+def transform_analysis(data):
+    transformed_analysis_data = []
+    index = 0
 
+    #Gets the trend direction
     def get_trend_direction(change):
         if change is None:
             return "Unknown"
@@ -198,5 +206,68 @@ def transform_analysis():
             "trend_direction": get_trend_direction(change),
             "trend_value": change
         })
+        index+=1
+    print(transformed_analysis_data)
+    return transformed_analysis_data
 
-    return analysis_data
+
+def transform_facts():
+    fact_data = []
+
+    ticker_data = transform_ticker(raw_data)
+    time_data = transform_time(raw_data)
+    industry_data = transform_industry(raw_data)
+    profitability_data = transform_profitability(raw_data)
+    risk_data = transform_risk(raw_data)
+    analysis_data = transform_analysis(raw_data)
+
+    for index, record in enumerate(raw_data):
+        info = record.get('info')
+        if not info:
+            continue
+
+        history = record['history']
+
+        net_income = info.get('netIncomeToCommon')
+        total_debt = info.get('totalDebt')
+        book_value = info.get('bookValue')
+        shares = info.get('sharesOutstanding')
+
+        # ROIC = Net Income / (Equity + Debt)
+        equity = book_value * shares
+
+        if None in (net_income, total_debt, book_value, shares) or (equity + total_debt) == 0:
+            roic = None
+        else:
+            roic = net_income / (equity + total_debt)
+
+        #The time of the exchange is the grain for the data warehouse. This will be observing data of 1h intervals in a span of 6months
+        for time_record in time_data:
+            date = time_record['fulldate']
+
+            fact_data.append({
+                # Dimension IDs
+                "ticker_id": ticker_data[index]['ticker_id'],
+                "time_key": time_record['time_key'],
+                "industry_id": industry_data[index]['industry_id'],
+                "tier_id": profitability_data[index]['tier_id'],
+                "risk_id": risk_data[index]['risk_id'],
+                "trend_id": analysis_data[index]['trend_id'],
+                # Measured values
+                "close_price": history.loc[date, 'Close'] if date in history.index else None,
+                "open_price": history.loc[date, 'Open'] if date in history.index else None,
+                "high_price": history.loc[date, 'High'] if date in history.index else None,
+                "low_price": history.loc[date, 'Low'] if date in history.index else None,
+                "revenue": info.get('totalRevenue'),
+                'return_on_asset': info.get('returnOnAssets'),
+                'return_on_investment': roic
+            })
+
+    print(fact_data)
+    return fact_data
+
+transform_facts()
+
+#transform_profitability(raw_data)
+#transform_industry()
+#transform_time()
