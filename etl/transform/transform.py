@@ -179,5 +179,8 @@ def transform_analysis(raw_data: List[Dict[str, Any]]) -> List[Dict]:
             "trend_direction": trend(change),
             "trend_value": change
         })
+        index+=1
+    print(transformed_analysis_data)
+    return transformed_analysis_data
 
     return result
