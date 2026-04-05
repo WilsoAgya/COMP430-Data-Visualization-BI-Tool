@@ -1,114 +1,99 @@
-import pandas as pd
-import requests
-import yfinance as yf
-from etl.extract.extract import extract
-import io
-
-raw_data = extract()
+from typing import List, Dict, Any
 
 
-def transform_ticker():
-
-    transformed_ticker_data = []
-    seen_symbols = set()
+# ---------- TICKER ----------
+def transform_ticker(raw_data: List[Dict[str, Any]]) -> List[Dict]:
+    result = []
+    seen = set()
 
     for index, record in enumerate(raw_data):
-        info = record["info"]
+        info = record.get("info", {})
 
-        if not info:
-            continue
-
-        if not info.get("shortName"):
-            continue
-
-        if not record.get("ticker"):
+        if not info.get("shortName") or not record.get("ticker"):
             continue
 
         symbol = info.get("symbol")
-
-        if symbol in seen_symbols:
+        if symbol in seen:
             continue
+        seen.add(symbol)
 
-        seen_symbols.add(symbol)
-
-        full_summary = info.get("longBusinessSummary", "")
-        sentences = full_summary.split(". ")
+        summary = info.get("longBusinessSummary", "")
+        sentences = summary.split(". ")
         short_summary = (". ".join(sentences[:3]) + ".")[:500] if sentences else ""
 
-        transformed_ticker_data.append({
+        result.append({
             "ticker_id": index,
             "company_name": info.get("shortName"),
             "ticker_symbol": record.get("ticker"),
             "market": info.get("country"),
-            "ticker_info": short_summary,
+            "ticker_info": short_summary
         })
 
-    return transformed_ticker_data
+    return result
 
 
-def transform_time():
-
-    transformed_time_data = []
-    seen_timestamps = set()
-    index = 0
+# ---------- TIME ----------
+def transform_time(raw_data: List[Dict[str, Any]]) -> List[Dict]:
+    result = []
+    seen = set()
+    idx = 0
 
     for record in raw_data:
-        history = record["history"]
+        history = record.get("history")
 
-        for row in history.index:
+        if history is None or history.empty:
+            continue
 
-            if row in seen_timestamps:
+        for ts in history.index:
+            if ts in seen:
                 continue
 
-            seen_timestamps.add(row)
+            seen.add(ts)
 
-            transformed_time_data.append({
-                "time_key": index,
-                "full_date": row,
-                "day": row.day,
-                "month": row.month,
-                "year": row.year
+            result.append({
+                "time_key": idx,
+                "full_date": ts,
+                "day": ts.day,
+                "month": ts.month,
+                "year": ts.year
             })
 
-            index += 1
+            idx += 1
 
-    return transformed_time_data
+    return result
 
 
-def transform_industry():
-
-    transformed_industry_data = []
-    seen_industries = set()
-    index = 0
+# ---------- INDUSTRY ----------
+def transform_industry(raw_data: List[Dict[str, Any]]) -> List[Dict]:
+    result = []
+    seen = set()
+    idx = 0
 
     for record in raw_data:
-        info = record["info"]
-
+        info = record.get("info", {})
         industry = info.get("industry")
 
-        if not industry:
+        if not industry or industry in seen:
             continue
 
-        if industry in seen_industries:
-            continue
+        seen.add(industry)
 
-        seen_industries.add(industry)
-
-        transformed_industry_data.append({
-            "industry_id": index,
+        result.append({
+            "industry_id": idx,
             "industry_name": industry,
             "sector": info.get("sector"),
             "currency": info.get("currency")
         })
 
-        index += 1
+        idx += 1
 
-    return transformed_industry_data
+    return result
 
 
-def transform_profitability():
+# ---------- PROFITABILITY ----------
+def transform_profitability(raw_data: List[Dict[str, Any]]) -> List[Dict]:
 
-    def get_roa_tier(roa):
+    def roa_tier(roa):
         if roa is None:
             return "Unknown"
         elif roa >= 0.20:
@@ -117,10 +102,9 @@ def transform_profitability():
             return "Good"
         elif roa >= 0.05:
             return "Average"
-        else:
-            return "Poor"
+        return "Poor"
 
-    def get_roic_tier(roic):
+    def roic_tier(roic):
         if roic is None:
             return "Unknown"
         elif roic >= 0.20:
@@ -129,14 +113,12 @@ def transform_profitability():
             return "Good"
         elif roic >= 0.06:
             return "Average"
-        else:
-            return "Poor"
+        return "Poor"
 
-    profitability_data = []
+    result = []
 
-    for index, record in enumerate(raw_data):
-
-        info = record["info"]
+    for idx, record in enumerate(raw_data):
+        info = record.get("info", {})
 
         net_income = info.get("netIncomeToCommon")
         total_debt = info.get("totalDebt")
@@ -148,55 +130,54 @@ def transform_profitability():
         else:
             roic = net_income / (book_value * shares + total_debt)
 
-        profitability_data.append({
-            "tier_id": index,
-            "roa_tier": get_roa_tier(info.get("returnOnAssets")),
-            "roic_tier": get_roic_tier(roic)
+        result.append({
+            "tier_id": idx,
+            "roa_tier": roa_tier(info.get("returnOnAssets")),
+            "roic_tier": roic_tier(roic)
         })
 
-    return profitability_data
+    return result
 
 
-def transform_risk():
+# ---------- RISK ----------
+def transform_risk(raw_data: List[Dict[str, Any]]) -> List[Dict]:
+    result = []
 
-    risk_data = []
+    for idx, record in enumerate(raw_data):
+        info = record.get("info", {})
 
-    for index, record in enumerate(raw_data):
-
-        info = record["info"]
-
-        risk_data.append({
-            "risk_id": index,
+        result.append({
+            "risk_id": idx,
             "risk_category_name": "Overall Risk",
             "risk_rating_overall": info.get("overallRisk")
         })
 
-    return risk_data
+    return result
 
 
-def transform_analysis():
+# ---------- ANALYSIS ----------
+def transform_analysis(raw_data: List[Dict[str, Any]]) -> List[Dict]:
 
-    analysis_data = []
-
-    def get_trend_direction(change):
+    def trend(change):
         if change is None:
             return "Unknown"
         elif change > 0.10:
             return "Uptrend"
         elif change < -0.10:
             return "Downtrend"
-        else:
-            return "Sideways"
+        return "Sideways"
 
-    for index, record in enumerate(raw_data):
+    result = []
 
-        info = record["info"]
+    for idx, record in enumerate(raw_data):
+        info = record.get("info", {})
+
         change = info.get("52WeekChange")
 
-        analysis_data.append({
-            "analysis_key": index,
-            "trend_direction": get_trend_direction(change),
+        result.append({
+            "analysis_key": idx,
+            "trend_direction": trend(change),
             "trend_value": change
         })
 
-    return analysis_data
+    return result
