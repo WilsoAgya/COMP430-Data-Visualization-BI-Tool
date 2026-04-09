@@ -20,6 +20,8 @@ import {
 import type { ChartConfig } from "@/components/ui/chart"
 import Footer from "./components/layout/footer"
 import StockCard from "./components/stock-card"
+import NewsTab from "@/components/dashboard/news-tab.tsx";
+import {useState} from "react";
 
 const chartConfig = {
   high: { label: "High Price", color: "var(--chart-1)" },
@@ -27,6 +29,10 @@ const chartConfig = {
 } satisfies ChartConfig
 
 function App() {
+
+  const [selectedTicker, setSelectedTicker] = useState(
+      mockTickers[0] ?? { symbol: "AAPL", companyName: "Apple Inc." }
+  )
 
   return (
       <main className="bg-background text-foreground min-h-screen px-4 py-10">
@@ -38,8 +44,9 @@ function App() {
 
           <DashboardFilters
               tickers={mockTickers}
-              onSelectTicker={(ticker) => console.log(ticker)}
+              onSelectTicker={setSelectedTicker}
           />
+
 
           <Tabs defaultValue="stock-info" className="w-full">
             <TabsList>
@@ -47,6 +54,7 @@ function App() {
               <TabsTrigger value="charts">Chart</TabsTrigger>
               <TabsTrigger value="news">News</TabsTrigger>
             </TabsList>
+
 
             <TabsContent value="stock-info">
               <StockCard {...mockStockCard} />
@@ -72,6 +80,15 @@ function App() {
                 </CardContent>
               </Card>
             </TabsContent>
+
+            <TabsContent value="news">
+              <p className="text-muted-foreground mb-3 text-sm">
+                Showing news for {selectedTicker.symbol} - {selectedTicker.companyName}
+              </p>
+              <NewsTab symbol={selectedTicker.symbol} companyName={selectedTicker.companyName} />
+            </TabsContent>
+
+
           </Tabs>
         </div>
         <footer className="mx-auto mt-10 w-full max-w-5xl border-t py-6">
