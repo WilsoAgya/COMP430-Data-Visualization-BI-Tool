@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
-from db.connection import get_connection
+from backend.api.db.connection import get_connection
 
 router = APIRouter()
 

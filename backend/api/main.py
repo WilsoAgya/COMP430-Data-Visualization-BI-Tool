@@ -1,5 +1,11 @@
 from fastapi import FastAPI
-from routes import ticker, industry, time, profitability, risk, analysis, etl
+from backend.api.routes import ticker
+from backend.api.routes import industry
+from backend.api.routes import time
+from backend.api.routes import profitability
+from backend.api.routes import risk
+from backend.api.routes import analysis
+from backend.api.routes import etl
 
 app = FastAPI()
 

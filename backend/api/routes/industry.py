@@ -1,7 +1,6 @@
 from fastapi import APIRouter
 from psycopg2.extras import RealDictCursor
-from db.connection import get_connection
-
+from backend.api.db.connection import get_connection
 router = APIRouter()
 
 @router.get("/industries")

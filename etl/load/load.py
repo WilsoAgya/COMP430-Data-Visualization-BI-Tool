@@ -1,9 +1,10 @@
 import psycopg2
 import os
 from dotenv import load_dotenv
+
+from etl.extract.extract import extract
 from etl.transform.transform import transform_ticker
 
-# Load environment variables from .env
 load_dotenv()
 
 def connect():
@@ -16,8 +17,8 @@ def connect():
         sslmode=os.getenv("DB_SSLMODE", "require")
     )
 
-def load_dim_ticker(conn):
-    rows = transform_ticker()
+
+def load_dim_ticker(conn, rows):
     cur = conn.cursor()
 
     for r in rows:
@@ -40,11 +41,19 @@ def load_dim_ticker(conn):
     conn.commit()
     cur.close()
 
-def run():
+
+def run_etl():
     conn = connect()
-    load_dim_ticker(conn)
+
+    data = extract()
+    ticker_data = transform_ticker(data)
+
+    load_dim_ticker(conn, ticker_data)
+
     conn.close()
-    print("Loaded dim_ticker")
+
+    print("ETL completed")
+
 
 if __name__ == "__main__":
-    run()
+    run_etl()
