@@ -1,2 +1,2 @@
-ALTER TABLE dim_time
-ADD COLUMN day integer;
+ALTER TABLE dim_analysis
+ADD COLUMN change NUMERIC;
