@@ -1,5 +1,7 @@
 # COMP430 Data Visualization BI Tool
 
+Deployed URL: https://comp430.jakobupton.dev/
+
 A full-stack business intelligence dashboard for exploring stock market data.
 
 The project currently includes:
