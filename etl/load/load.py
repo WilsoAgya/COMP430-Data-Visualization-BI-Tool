@@ -3,10 +3,9 @@ import os
 from dotenv import load_dotenv
 from etl.transform.transform import transform_ticker, transform_time, transform_analysis, transform_industry, \
     transform_facts, transform_risk, transform_profitability
-
 from psycopg2.extras import execute_values
+from etl.transform.transform import transform_ticker
 
-# Load environment variables from .env
 load_dotenv()
 
 def connect():
@@ -26,7 +25,7 @@ def load_dim_time(conn):
 
     for r in rows:
         cur.execute(
-            
+
             '''INSERT INTO dim_time
             (time_key,full_date,year,month,day,hour,minute,timezone)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
@@ -155,7 +154,8 @@ def load_dim_profitability(conn):
     conn.commit()
     cur.close()
 #load ticker dimension
-def load_dim_ticker(conn):
+
+def load_dim_ticker(conn, rows):
     rows = transform_ticker()
     cur = conn.cursor()
 

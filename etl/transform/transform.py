@@ -11,6 +11,7 @@ raw_data = extract()
 
 def transform_ticker():
 
+
     transformed_ticker_data = []
     seen_symbols = set()
     index = 0
@@ -200,8 +201,7 @@ def transform_analysis():
             return "Uptrend"
         elif change < -0.10:
             return "Downtrend"
-        else:
-            return "Sideways"
+        return "Sideways"
 
     for record in raw_data:
 

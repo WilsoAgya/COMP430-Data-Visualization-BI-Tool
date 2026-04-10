@@ -2,6 +2,7 @@ import pandas as pd
 import requests
 import yfinance as yf
 import io
+from typing import List, Dict, Any, Optional
 
 
 #Decided to stick with hardcoded companies for now just using 10 popular ones
@@ -32,7 +33,7 @@ tickers = [
     'AMAT', 'LRCX', 'KLAC', 'MCHP', 'ADI',
     'NXPI', 'TXN',  'MPWR', 'ON',   'STX',
 
- 
+
     'COST', 'TGT',  'LOW',  'ORLY', 'AZO',
     'EBAY', 'ETSY', 'CHWY', 'BKNG', 'ABNB',
     'LYFT', 'DASH', 'UBER', 'SHOP',
@@ -60,7 +61,7 @@ tickers = [
     'MRNA', 'BNTX', 'BIIB', 'ALNY', 'INCY', 'NVAX',
 
     'NVO',  'SAP',  'TM',   'SNY',  'AZN',  'SHEL', 'VALE', 'SONY', 'RACE',
-    
+
     'AMT',  'EQIX', 'PLD',  'O',    'VICI', 'DLR',  'PSA',
 
     'ODFL', 'SAIA', 'ZIM',  'DAL',  'UAL',
