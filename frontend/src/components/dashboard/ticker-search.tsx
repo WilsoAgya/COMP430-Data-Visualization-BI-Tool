@@ -1,57 +1,90 @@
-import { useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 
 import { Input } from "@/components/ui/input"
-
-interface Ticker {
-    symbol: string
-    companyName: string
-}
+import { searchTickers, type TickerOption } from "@/lib/ticker-api"
 
 interface TickerSearchProps {
-    tickers: Ticker[]
-    onSelectTicker: (ticker: Ticker) => void
+  onSelectTicker: (ticker: TickerOption) => void
 }
 
-export default function TickerSearch({ tickers, onSelectTicker }: TickerSearchProps) {
-    const [query, setQuery] = useState("")
+export default function TickerSearch({ onSelectTicker }: TickerSearchProps) {
+  const [query, setQuery] = useState("")
+  const [results, setResults] = useState<TickerOption[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [isOpen, setIsOpen] = useState(false)
 
-    const filteredTickers = useMemo(() => {
-        const value = query.toLowerCase()
+  useEffect(() => {
+    if (!isOpen) {
+      return
+    }
 
-        return tickers.filter((ticker) => {
-            return (
-                ticker.symbol.toLowerCase().includes(value) ||
-                ticker.companyName.toLowerCase().includes(value)
-            )
-        })
-    }, [query, tickers])
+    let cancelled = false
+    const timeoutId = window.setTimeout(async () => {
+      setLoading(true)
+      setError(null)
 
-    return (
-        <div className="relative w-full max-w-md">
-            <Input
-                value={query}
-                placeholder="Search ticker or company"
-                onChange={(event) => setQuery(event.target.value)}
-            />
+      try {
+        const data = await searchTickers(query)
+        if (!cancelled) {
+          setResults(data)
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setResults([])
+          setError(err instanceof Error ? err.message : "Failed to search tickers")
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
+    }, 200)
 
-            {query.length > 0 ? (
-                <div className="bg-card absolute top-full left-0 right-0 z-50 mt-2 rounded-md border shadow-lg">
-                    {filteredTickers.slice(0, 5).map((ticker) => (
-                        <button
-                            key={ticker.symbol}
-                            type="button"
-                            className="hover:bg-accent block w-full px-3 py-2 text-left"
-                            onClick={() => {
-                                setQuery(ticker.symbol)
-                                onSelectTicker(ticker)
-                            }}
-                        >
-                            {ticker.symbol} - {ticker.companyName}
-                        </button>
-                    ))}
-                </div>
-            ) : null}
+    return () => {
+      cancelled = true
+      window.clearTimeout(timeoutId)
+    }
+  }, [isOpen, query])
+
+  return (
+    <div className="relative w-full max-w-md">
+      <Input
+        value={query}
+        placeholder="Search ticker or company"
+        onFocus={() => setIsOpen(true)}
+        onBlur={() => {
+          window.setTimeout(() => setIsOpen(false), 100)
+        }}
+        onChange={(event) => setQuery(event.target.value)}
+      />
+
+      {isOpen ? (
+        <div className="bg-card absolute top-full right-0 left-0 z-50 mt-2 rounded-md border shadow-lg">
+          {loading ? <p className="text-muted-foreground px-3 py-2 text-sm">Searching...</p> : null}
+          {!loading && error ? <p className="text-destructive px-3 py-2 text-sm">{error}</p> : null}
+          {!loading && !error && !results.length ? (
+            <p className="text-muted-foreground px-3 py-2 text-sm">No matching tickers.</p>
+          ) : null}
+          {!loading && !error
+            ? results.map((ticker) => (
+                <button
+                  key={ticker.symbol}
+                  type="button"
+                  className="hover:bg-accent block w-full px-3 py-2 text-left"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => {
+                    setQuery(`${ticker.symbol} - ${ticker.companyName}`)
+                    setIsOpen(false)
+                    onSelectTicker(ticker)
+                  }}
+                >
+                  {ticker.symbol} - {ticker.companyName}
+                </button>
+              ))
+            : null}
         </div>
-    )
-
+      ) : null}
+    </div>
+  )
 }
